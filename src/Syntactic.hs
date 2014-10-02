@@ -50,6 +50,17 @@ zero3 = num3 0
 zeroPOne3 = add3 zero3 $ num3 1
 zeroPZeroPOne3 = add3 zero3 zeroPOne3
 
+-- Sec. 2.3
+evalNUM :: Expr3 a -> a
+evalNUM (Sym (Num n)) = n
+evalNUM (Sym Add :$ a :$ b) = evalNUM a + evalNUM b
+evalNUM (Sym Mul :$ a :$ b) = evalNUM a * evalNUM b
+
+renderNUM :: Expr3 a -> String
+renderNUM (Sym (Num n)) = show n
+renderNUM (Sym Add :$ a :$ b) = "(" ++ renderNUM a ++ " + " ++ renderNUM b ++ ")"
+renderNUM (Sym Mul :$ a :$ b) = "(" ++ renderNUM a ++ " * " ++ renderNUM b ++ ")"
+
 -- Sec. 3
 
 --- Listing 1.
