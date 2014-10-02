@@ -1,3 +1,5 @@
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -7,6 +9,7 @@
 {-# LANGUAGE OverlappingInstances #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE UnicodeSyntax #-}
 
 module Syntactic where
 
@@ -207,3 +210,73 @@ optAddRule :: (NUM :<: dom) => AST dom a -> AST dom a
 
 optAddRule (ADD :$ a :$ NUM 0) = a
 optAddRule a = a
+
+-- Sec. 4.1
+type family Denotation sig
+type instance Denotation (Full a) = a
+type instance Denotation (a :-> sig) = a -> Denotation sig
+
+evalG ∷ (∀ a.     dom a → Denotation a)
+      → (∀ a. AST dom a → Denotation a)
+evalG f (Sym s)  = f s
+evalG f (s :$ a) = evalG f s (evalG f a)
+
+evalSymNUM :: NUM a -> Denotation a
+evalSymNUM (Num n) = n
+evalSymNUM Add     = (+)
+evalSymNUM Mul     = (*)
+
+class Eval expr where
+  eval ∷ expr a -> Denotation a
+
+-- Boilerplate for generic functions
+instance (Eval sub1, Eval sub2) => Eval (sub1 :+: sub2) where
+  eval (InjL v) = eval v
+  eval (InjR v) = eval v
+
+instance Eval dom => Eval (AST dom) where
+  eval (Sym s) = eval s
+  eval (f :$ a) = eval f (eval a)
+
+-- Interesting cases
+instance Eval NUM where
+  eval (Num n) = n
+  eval Add     = (+)
+  eval Mul     = (*)
+
+instance Eval Logic where
+  eval Eq = (==)
+  eval Not = not
+instance Eval If where
+  eval If = \ c t e -> if c then t else e
+
+-- Sec. 4.2
+
+class Render expr where
+  renderArgs :: expr a -> [String] -> String
+
+render :: Render expr => expr a -> String
+render a = renderArgs a []
+
+instance (Render sub1, Render sub2) => Render (sub1 :+: sub2) where
+  renderArgs (InjL v) = renderArgs v
+  renderArgs (InjR v) = renderArgs v
+
+-- Interesting cases
+instance Render NUM where
+  renderArgs (Num n) [] = show n
+  renderArgs Add [a, b] = "(" ++ a ++ " + " ++ b ++ ")"
+  renderArgs Mul [a, b] = "(" ++ a ++ " * " ++ b ++ ")"
+
+instance Render Logic where
+  renderArgs Eq [a, b] = "(" ++ a ++ " == " ++ b ++ ")"
+  renderArgs Not [a] = "(not " ++ a ++ ")"
+
+instance Render If where
+  renderArgs If [c, t, e] = unwords ["if", c, "then", t, "else", e]
+
+instance Render dom => Render (AST dom) where
+  renderArgs (Sym s)  xs = renderArgs s xs
+  renderArgs (f :$ a) xs = renderArgs f (render a : xs)
+
+-- Sec. 4.3
