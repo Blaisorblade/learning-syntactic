@@ -177,3 +177,10 @@ countAdds (a :$ b)    = countAdds a + countAdds b
 countAdds s -- `s` was `Sym s` in the paper.
   | Just Add <- prj s = 1
   | otherwise         = 0
+
+-- Sec. 3.2
+optAddTop :: (NUM :<: dom) => AST dom a -> AST dom a
+optAddTop (add :$ a :$ zero)
+  | Just Add <- prj add
+  , Just (Num 0) <- prj zero = a
+optAddTop a = a
