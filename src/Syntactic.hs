@@ -116,6 +116,7 @@ instance (sub :<: sup) => sub :<: AST sup where
 
 --- End Listing 2
 
+--- Listing 3
 data Logic a where
   Not :: Logic (Bool :-> Full Bool)
   Eq  :: Eq a => Logic (a :-> a :-> Full Bool)
@@ -124,3 +125,55 @@ data If a where
   If :: If (Bool :-> a :-> a :-> Full a)
 
 type Expr a = ASTF (NUM :+: Logic :+: If) a
+
+num :: (NUM :<: dom) => Int -> ASTF dom Int
+num = inj . Num
+
+(⊕) :: (NUM :<: dom) =>
+       ASTF dom Int -> ASTF dom Int -> ASTF dom Int
+a ⊕ b = inj Add :$ a :$ b
+
+(⊙) :: (NUM :<: dom) =>
+       ASTF dom Int -> ASTF dom Int -> ASTF dom Int
+a ⊙ b = inj Mul :$ a :$ b
+
+(≣) :: (Logic :<: dom, Eq a) =>
+       ASTF dom a -> ASTF dom a -> ASTF dom Bool
+a ≣ b = inj Eq :$ a :$ b
+
+cond :: (If :<: dom) =>
+       ASTF dom Bool -> ASTF dom a -> ASTF dom a -> ASTF dom a
+cond c t e = inj If :$ c :$ t :$ e
+
+infixl 6 ⊕
+infixl 7 ⊙
+
+--- End Listing 3
+
+nnot :: (Logic :<: dom) => ASTF dom Bool -> ASTF dom Bool
+nnot a = inj Not :$ a
+
+ex2 :: (NUM :<: dom) => ASTF dom Int
+ex2 = (num 5 ⊕ num 0) ⊙ num 6
+
+ex3 :: (NUM :<: dom, Logic :<: dom) => ASTF dom Bool
+ex3 = ex2 ≣ ex2
+
+ex2M :: Expr Int
+ex2M = ex2
+ex3M :: Expr Bool
+ex3M = ex3
+
+-- Sec. 3.1
+size :: AST dom a -> Int
+size (Sym _) = 1
+size (a :$ b) = size a + size b
+
+exSize2 = size ex2M
+exSize3 = size ex3M
+
+countAdds :: (NUM :<: dom) => AST dom a -> Int
+countAdds (Sym s)
+  | Just Add <- prj s = 1
+  | otherwise         = 0
+countAdds (a :$ b)    = countAdds a + countAdds b
