@@ -189,7 +189,9 @@ optAddTop a = a
 
 -- My extension: using pattern synonyms together with view patterns.
 
--- XXX turn these into bidirectional patterns
+-- XXX turn these into explicitly bidirectional patterns, after the code merged
+-- in https://ghc.haskell.org/trac/ghc/ticket/8581 (when it was first fixed) is
+-- released.
 pattern ADD <- Sym (prj -> Just Add)
 pattern NUM n <- Sym (prj -> Just (Num n))
 
