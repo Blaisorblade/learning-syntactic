@@ -5,6 +5,8 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverlappingInstances #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Syntactic where
 
@@ -184,3 +186,22 @@ optAddTop (add :$ a :$ zero)
   | Just Add <- prj add
   , Just (Num 0) <- prj zero = a
 optAddTop a = a
+
+-- My extension: using pattern synonyms together with view patterns.
+
+-- XXX turn these into bidirectional patterns
+pattern ADD <- Sym (prj -> Just Add)
+pattern NUM n <- Sym (prj -> Just (Num n))
+
+-- countAdds, implemented using pattern synonyms.
+countAdds2 :: (NUM :<: dom) => AST dom a -> Int
+
+countAdds2 (a :$ b) = countAdds a + countAdds b
+countAdds2 ADD      = 1
+countAdds2 _        = 0
+
+-- optAddTop, renamed and simplified through pattern synonyms.
+optAddRule :: (NUM :<: dom) => AST dom a -> AST dom a
+
+optAddRule (ADD :$ a :$ NUM 0) = a
+optAddRule a = a
