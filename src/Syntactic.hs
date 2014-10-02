@@ -69,6 +69,9 @@ data (dom1 :+: dom2) a where
   InjL :: dom1 a -> (dom1 :+: dom2) a
   InjR :: dom2 a -> (dom1 :+: dom2) a
 
+infixr :+: -- We need this line because left-nested uses don't fully work --
+           -- commenting this out makes exSize3 fail.
+
 --- Listing 2, altered according to syntactic 2.0.
 data Empty
 
