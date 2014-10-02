@@ -173,7 +173,7 @@ exSize2 = size ex2M
 exSize3 = size ex3M
 
 countAdds :: (NUM :<: dom) => AST dom a -> Int
-countAdds (Sym s)
+countAdds (a :$ b)    = countAdds a + countAdds b
+countAdds s -- `s` was `Sym s` in the paper.
   | Just Add <- prj s = 1
   | otherwise         = 0
-countAdds (a :$ b)    = countAdds a + countAdds b
