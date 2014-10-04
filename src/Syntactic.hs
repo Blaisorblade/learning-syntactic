@@ -509,3 +509,21 @@ instance (Logic :<: dom, OptAdd dom dom) ⇒ OptAdd Logic dom where
 instance (If :<: dom, OptAdd dom dom) ⇒ OptAdd If dom where
   optAddSym If (c :* t :* e :* Nil) =
     appArgs (Sym (inj If)) (optAdd c :* t :* e :* Nil)
+
+-- Sec. 8: Mutually recursive types
+
+data E a -- Expressions
+data S   -- Statements
+
+type Var = String
+
+type ExprEnc a = ASTF (ExprDom :+: StmtDom) (E a)
+type StmtEnc   = ASTF (ExprDom :+: StmtDom) S
+
+data ExprDom a where
+  NumSym  :: Int → ExprDom (Full (E Int))
+  AddSym  ::        ExprDom (E Int :-> E Int :-> Full (E Int))
+  ExecSym :: Var → ExprDom (S :-> Full (E a))
+data StmtDom a where
+  AssignSym ∷ Var → StmtDom (E a :-> Full S)
+  SeqSym    ::        StmtDom (S :-> S :-> Full S)
