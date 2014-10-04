@@ -164,10 +164,16 @@ ex2 = (num 5 ⊕ num 0) ⊙ num 6
 ex3 :: (NUM :<: dom, Logic :<: dom) => ASTF dom Bool
 ex3 = ex2 ≣ ex2
 
+-- From Sec. 4.3
+ex4 :: (NUM :<: dom, Logic :<: dom, If :<: dom) => ASTF dom Int
+ex4 = cond (num 1 ≣ num 2) (num 3) ex2
+
 ex2M :: Expr Int
 ex2M = ex2
 ex3M :: Expr Bool
 ex3M = ex3
+ex4M :: Expr Int
+ex4M = ex4
 
 -- Sec. 3.1
 size :: AST dom a -> Int
