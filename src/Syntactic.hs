@@ -333,3 +333,79 @@ instance Equality Logic where
 
 instance Equality If where
   equal If       If = True
+
+-- Sec. 6: Regaining type-safety
+
+{-
+
+type family Result sig
+type instance Result (Full a) = a
+type instance Result (a :-> b) = Result b
+
+-- The version I came up with. In this version, there are less
+-- `Full` wrappers around stuff (compare argEx here and below).
+
+data Args c sig where
+  Nil :: Args c (Full a)
+  (:*) :: c (Result (Full a)) -> Args c sig -> Args c (a :-> sig)
+
+infixr :*
+
+argEx :: Args Maybe (Int :-> Bool :-> Full Char)
+argEx = Just 1 :* Just False :* Nil
+
+typedFold :: ∀ dom c.
+     (∀ sig. dom sig → Args c sig → c (Result sig)) →
+     (∀ a. ASTF dom a → c a)
+typedFold f t = go t Nil
+  where
+    go :: ∀ sig.
+         AST dom sig → Args c sig → c (Result sig)
+    go (Sym s)  as = f s as
+    -- Both do the same:
+    --go (s :$ a) as = go s (go a Nil :* as)
+    go (s :$ a) as = go s (typedFold f a :* as)
+-}
+
+
+-- The version in the paper
+
+-- Sec 6.1: Typed argument lists
+type family Result sig
+
+-- Note that Result removes the Full type constructor...
+type instance Result (Full a) = a
+type instance Result (a :-> b) = Result b
+-- But we often do use Full (Result sig)!
+
+data Args c sig where
+  Nil :: Args c (Full a)
+  (:*) :: c (Full a) -> Args c sig -> Args c (a :-> sig)
+
+infixr :*
+
+argEx :: Args Maybe (Int :-> Bool :-> Full Char)
+argEx = Just (Full 1) :* Just (Full False) :* Nil
+
+-- Sec 6.2: Type-safe fold
+
+typedFold :: ∀ dom c.
+     (∀ sig. dom sig → Args c sig → c (Full (Result sig))) →
+     (∀ a. ASTF dom a              → c (Full a))
+typedFold f t = go t Nil
+  where
+    go :: ∀ sig.
+         AST dom sig → Args c sig → c (Full (Result sig))
+    go (Sym s)  as = f s as
+    go (s :$ a) as = go s (go a Nil :* as)
+
+everywhere ∷ (∀ a. ASTF dom a → ASTF dom a) →
+             (∀ a. ASTF dom a → ASTF dom a)
+everywhere f = typedFold (appArgs2 f)
+
+appArgs2 :: (∀ a. ASTF dom a → ASTF dom a) → dom sig -> Args (AST dom) sig -> AST dom (Full (Result sig))
+appArgs2 f = \s → f . appArgs (Sym s)
+
+appArgs :: AST dom sig -> Args (AST dom) sig -> AST dom (Full (Result sig))
+appArgs s Nil = s
+appArgs s (a :* as) = appArgs (s :$ a) as
