@@ -10,6 +10,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE UnicodeSyntax #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Syntactic where
 
@@ -285,3 +286,50 @@ instance Render Logic where
 
 instance Render If where
   renderArgs If [c, t, e] = unwords ["if", c, "then", t, "else", e]
+
+-- Sec. 5
+
+fold ∷ ∀ dom res. (∀ a. dom a → [res] → res)
+                → (∀ a. AST dom a →     res)
+fold f a = go a []
+  where
+    go :: AST dom a -> [res] -> res
+    go (Sym s)  as = f s as
+    go (s :$ a) as = go s (fold f a : as)
+
+-- With this, the instance for AST is unnecessary.
+render2 = fold renderArgs
+
+-- Term equality
+class Equality expr where
+  -- equal :: expr a -> expr a -> Bool
+  --
+  -- The type above is too strict, so it cannot be used for application nodes,
+  -- since corresponding subterms are not guaranteed to have the same type.
+  equal :: expr a -> expr b -> Bool
+
+-- Boilerplate-ish instances.
+instance (Equality sub1, Equality sub2) => Equality (sub1 :+: sub2) where
+  equal (InjL v1) (InjL v2) = equal v1 v2
+  equal (InjR v1) (InjR v2) = equal v1 v2
+  equal _         _         = False
+
+instance Equality dom => Equality (AST dom) where
+  equal (Sym s1)   (Sym s2)   = equal s1 s2
+  equal (f1 :$ s1) (f2 :$ s2) = equal f1 f2 && equal s1 s2
+  equal _          _          = False
+
+-- Language-specific instances
+instance Equality NUM where
+  equal (Num n1) (Num n2) = n1 == n2
+  equal Add      Add      = True
+  equal Mul      Mul      = True
+  equal _        _        = False
+
+instance Equality Logic where
+  equal Not      Not      = True
+  equal Eq       Eq       = True
+  equal _        _        = False
+
+instance Equality If where
+  equal If       If = True

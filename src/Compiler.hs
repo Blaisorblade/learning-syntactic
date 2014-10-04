@@ -57,6 +57,14 @@ compileTop expr =
   execWriterT $
   compile expr (R $ V 0)
 
+-- With this, the instance for AST is unnecessary.
+compileTop2 a =
+  unlines $
+  unP $
+  flip evalState (V 1) $
+  execWriterT $
+  fold compileArgs a (R $ V 0)
+
 -- Boilerplate
 -- This is analogous to render.
 compile :: Compile expr => expr a -> CodeGen
