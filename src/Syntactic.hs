@@ -345,6 +345,8 @@ type instance Result (a :-> b) = Result b
 
 -- The version I came up with. In this version, there are less
 -- `Full` wrappers around stuff (compare argEx here and below).
+-- However, Sec. 6.1 explains why that is not done, and this would be a problem
+-- in Sec. 7
 
 data Args c sig where
   Nil :: Args c (Full a)
@@ -443,3 +445,40 @@ instance RenderSafe Logic where
 
 instance RenderSafe If where
   renderArgsSafe If (Const c :* Const t :* Const e :* Nil) = unwords ["if", c, "then", t, "else", e]
+
+-- Sec. 7: Controlling the recursion
+
+-- We get the following by taking typedFold, removing the recursive call, and
+-- adapting the arguments of Args in the type signature. The version in the
+-- paper has a different type signature, and the paper claims this extra
+-- generality makes it more applicable. I currently doubt it, so let's see where
+-- this version fails.
+
+query :: ∀ dom c.
+     (∀ sig. dom sig → Args (AST dom) sig → c (Full (Result sig))) →
+     (∀ a. ASTF dom a              → c (Full a))
+query f t = go t Nil
+  where
+    go :: ∀ sig.
+         AST dom sig → Args (AST dom) sig → c (Full (Result sig))
+    go (Sym s)  as = f s as
+    go (s :$ a) as = go s (a :* as)
+
+-- Left out from the paper: defining typedFold in terms of query. Since query is
+-- a one-level fold, to get a multi-level fold we follow the standard pattern.
+-- That is, query's argument will first recurse onto all arguments, and then
+-- apply the function to the symbol and the transformed arguments. The only
+-- difference is that we have an extra child (representing the node
+-- constructor), but we still do not need to recurse on it (we recurse on the
+-- whole node).
+
+-- We do the obvious thing: we construct an argument to query and do the recursive calls on the arguments
+
+mapArgs :: (∀ a. f (Full a) → g (Full a)) → Args f sig → Args g sig
+mapArgs f Nil = Nil
+mapArgs f (a :* as) = f a :* mapArgs f as
+
+typedFold2 :: ∀ dom c.
+     (∀ sig. dom sig → Args c sig → c (Full (Result sig))) →
+     (∀ a. ASTF dom a              → c (Full a))
+typedFold2 f = query $ \sym → f sym . mapArgs (typedFold2 f)
