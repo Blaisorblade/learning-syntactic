@@ -14,6 +14,7 @@
 
 module Syntactic where
 
+import Data.Monoid (mconcat)
 -- Following Emil Axelsson, "A Generic Abstract Syntax Model for Embedded
 -- Languages", ICFP 2012, http://doi.acm.org/10.1145/2364527.2364573.
 
@@ -397,7 +398,9 @@ typedFold f t = go t Nil
     go :: ∀ sig.
          AST dom sig → Args c sig → c (Full (Result sig))
     go (Sym s)  as = f s as
-    go (s :$ a) as = go s (go a Nil :* as)
+    -- Both do the same:
+    --go (s :$ a) as = go s (go a Nil :* as)
+    go (s :$ a) as = go s (typedFold f a :* as)
 
 everywhere ∷ (∀ a. ASTF dom a → ASTF dom a) →
              (∀ a. ASTF dom a → ASTF dom a)
@@ -409,3 +412,34 @@ appArgs2 f = \s → f . appArgs (Sym s)
 appArgs :: AST dom sig -> Args (AST dom) sig -> AST dom (Full (Result sig))
 appArgs s Nil = s
 appArgs s (a :* as) = appArgs (s :$ a) as
+
+newtype Const a b = Const { unConst :: a }
+
+typedFoldSimple ∷ ∀ dom c.
+   (∀ sig. dom sig → Args (Const c) sig → c) →
+   (∀ a.  ASTF dom a                     → c)
+typedFoldSimple f = unConst . typedFold ((Const .) . f)
+
+class RenderSafe sym where
+  renderArgsSafe ∷ sym a → Args (Const String) a → String
+
+renderSafe = typedFoldSimple renderArgsSafe
+
+binOp op a b = mconcat ["(", a, " ", op, " ", b, ")"]
+
+-- We still need the instance for :+:
+instance (RenderSafe sub1, RenderSafe sub2) ⇒ RenderSafe (sub1 :+: sub2) where
+  renderArgsSafe (InjL v) = renderArgsSafe v
+  renderArgsSafe (InjR v) = renderArgsSafe v
+
+instance RenderSafe NUM where
+  renderArgsSafe (Num n) Nil = show n
+  renderArgsSafe Add (Const a :* Const b :* Nil) = binOp "+" a b
+  renderArgsSafe Mul (Const a :* Const b :* Nil) = binOp "*" a b
+
+instance RenderSafe Logic where
+  renderArgsSafe Not (Const b :* Nil) = mconcat ["(not ", b, ")"]
+  renderArgsSafe Eq (Const a :* Const b :* Nil) = binOp "==" a b
+
+instance RenderSafe If where
+  renderArgsSafe If (Const c :* Const t :* Const e :* Nil) = unwords ["if", c, "then", t, "else", e]
