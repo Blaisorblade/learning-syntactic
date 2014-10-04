@@ -1,16 +1,26 @@
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UnicodeSyntax #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE DataKinds #-}
 
 module Zippers where
 
 import Syntactic
 
--- | A location in an AST, where the hole has signature sigHole, and the whole tree
--- has signature sig. All ASTs involved share the same domain.
-data ASTLocation dom sigHole sig = Loc (AST dom sigHole) (ASTZipper dom sigHole sig)
+
+data HList where
+  HNil :: HList
+  (:::) :: a → HList → HList
+infixr 5 :::
+
+-- | A location in an AST, where the hole's signature is the head of sigHoles,
+-- and the whole tree has signature sig. All ASTs involved share the same
+-- domain.
+data ASTLocation dom (sigHoles :: HList) sig where
+  Loc :: AST dom sigHole → ASTZipper dom (sigHole ::: sigs) sig → ASTLocation dom (sigHole ::: sigs) sig
 -- Generally speaking, to create a zipper for an inductive data type, we need to
 -- similarly duplicate all indexes (since they might vary), creating for each
 -- original index two indexes of both zipper type and location type, but we
@@ -18,51 +28,45 @@ data ASTLocation dom sigHole sig = Loc (AST dom sigHole) (ASTZipper dom sigHole 
 -- each original parameter one parameter of both zipper type and location type.
 -- In this case, since for the type constructor 'AST' 'dom' is a parameter but
 -- 'sig' is an index, we get a zipper with one parameter and two indexes.
+-- Apparently, to avoid existentials we seem to need a list of types, as below.
+-- Now, this trick must be standard, but where is it described? I'd guess Conor
+-- McBride must be aware of it, since he worked on zippers and he uses Agda.
 
 -- | A Zipper.
-data ASTZipper dom sigHole sig where
+data ASTZipper dom (sigHoles :: HList) sig where
   -- | The empty zipper. Since the hole is the whole tree, the signature of the
   -- hole and of the tree have to match.
-  ZHole :: ASTZipper dom sig sig
+  ZHole :: ASTZipper dom (sig ::: HNil) sig
   -- | A zipper for a hole on the left. This zipper provides the right sibling
   -- and a parent zipper. The hole signature of the resulting zipper is bigger,
   -- since it needs to accept as parameter the right sibling we provide.
-  ZLeft :: ASTZipper dom sig sigTot → AST dom (Full a)
-          → ASTZipper dom (a :-> sig) sigTot
+  ZLeft :: ASTZipper dom (sig ::: sigs) sigTot → AST dom (Full a)
+          → ASTZipper dom (a :-> sig ::: sig ::: sigs) sigTot
   -- | A zipper for a hole on the right. This zipper provides the left sibling
   -- and a parent zipper. The hole signature of the resulting zipper is the
   -- argument type for the given left sibling.
-  ZRight :: AST dom (a :-> sig) → ASTZipper dom sig sigTot -> ASTZipper dom (Full a) sigTot
+  ZRight :: AST dom (a :-> sig) → ASTZipper dom (sig ::: sigs) sigTot -> ASTZipper dom (Full a ::: sig ::: sigs) sigTot
 
-{-
-data Exists b where
-  Ex :: ∀ a. b a → Exists b
--}
+goLeft :: ASTLocation dom (Full a ::: sig ::: sigs) sigTot → ASTLocation dom (a :-> sig ::: sig ::: sigs) sigTot
+goLeft (Loc arg (ZRight f parent)) = Loc f (ZLeft parent arg)
 
--- We need existentials here... that's so sad...
-goLeft :: ASTLocation dom (Full a) sigTot → (∀ sig. ASTLocation dom (a :-> sig) sigTot → b) → b
-goLeft (Loc arg (ZRight f parent)) k = k $ Loc f (ZLeft parent arg)
-
-goRight :: ASTLocation dom (a :-> sig) sigTot → ASTLocation dom (Full a) sigTot
+goRight :: ASTLocation dom (a :-> sig ::: sig ::: sigs) sigTot → ASTLocation dom (Full a ::: sig ::: sigs) sigTot
 goRight (Loc f (ZLeft parent arg)) = Loc arg (ZRight f parent)
 
-goLeftUp :: ASTLocation dom (a :-> sig) sigTot -> ASTLocation dom sig sigTot
+goLeftUp :: ASTLocation dom (a :-> sig ::: sig ::: sigs) sigTot -> ASTLocation dom (sig ::: sigs) sigTot
 goLeftUp (Loc f (ZLeft parent arg))  = Loc (f :$ arg) parent
 
-goRightUp :: ASTLocation dom (Full a) sigTot → (∀ sig. ASTLocation dom sig sigTot → b) → b
-goRightUp (Loc arg (ZRight f parent)) k = k $ Loc (f :$ arg) parent
+goRightUp :: ASTLocation dom (Full a ::: sig ::: sigs) sigTot → ASTLocation dom (sig ::: sigs) sigTot
+goRightUp (Loc arg (ZRight f parent)) = Loc (f :$ arg) parent
 
-goUp :: ASTLocation dom someSig sigTot → (∀ sig. ASTLocation dom sig sigTot → b) → b
-goUp l@(Loc f   (ZLeft parent arg)) k = k $ goLeftUp l
-goUp l@(Loc arg (ZRight f parent))  k =     goRightUp l k
+goUp :: ASTLocation dom (sig1 ::: sig ::: sigs) sigTot → ASTLocation dom (sig ::: sigs) sigTot
+goUp l@(Loc f   (ZLeft parent arg)) = goLeftUp l
+goUp l@(Loc arg (ZRight f parent))  = goRightUp l
 
--- In fact, we can probably avoid existentials by just storing all indexes in a
--- type-level list (as provided by HList).
-
-mergeLoc :: ASTLocation dom sigHole sig → AST dom sig
+mergeLoc :: ASTLocation dom sigHoles sig → AST dom sig
 mergeLoc (Loc ast zip) = merge ast zip
 
-merge :: AST dom sigHole → ASTZipper dom sigHole sig → AST dom sig
+merge :: AST dom sigHole → ASTZipper dom (sigHole ::: sigs) sig → AST dom sig
 merge ast ZHole = ast
 merge ast (ZLeft parent right) = merge (ast :$ right) parent
 merge ast (ZRight left parent) = merge (left :$ ast)  parent
