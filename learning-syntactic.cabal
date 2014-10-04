@@ -16,7 +16,7 @@ extra-source-files:  README.md
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     Compiler, Syntactic
+  exposed-modules:     Compiler, Syntactic, Sec7UndecidableInstances
   -- other-modules:
   -- XXX Move flags here from code?
   other-extensions:    RankNTypes, TypeFamilies, FlexibleContexts, NoMonomorphismRestriction, FlexibleInstances, MultiParamTypeClasses, TypeOperators, GADTs, OverlappingInstances, ViewPatterns, UnicodeSyntax
