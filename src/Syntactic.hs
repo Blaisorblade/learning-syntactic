@@ -255,12 +255,17 @@ instance Eval If where
 class Render expr where
   renderArgs :: expr a -> [String] -> String
 
+-- Boilerplate
 render :: Render expr => expr a -> String
 render a = renderArgs a []
 
 instance (Render sub1, Render sub2) => Render (sub1 :+: sub2) where
   renderArgs (InjL v) = renderArgs v
   renderArgs (InjR v) = renderArgs v
+
+instance Render dom => Render (AST dom) where
+  renderArgs (Sym s)  xs = renderArgs s xs
+  renderArgs (f :$ a) xs = renderArgs f (render a : xs)
 
 -- Interesting cases
 instance Render NUM where
@@ -274,9 +279,3 @@ instance Render Logic where
 
 instance Render If where
   renderArgs If [c, t, e] = unwords ["if", c, "then", t, "else", e]
-
-instance Render dom => Render (AST dom) where
-  renderArgs (Sym s)  xs = renderArgs s xs
-  renderArgs (f :$ a) xs = renderArgs f (render a : xs)
-
--- Sec. 4.3
