@@ -61,6 +61,9 @@ data ASTZipperL dom (sigHoles :: HList) sig where
   LNil :: ASTZipperL dom (sig ::: HNil) sig
   LCons :: ASTZipperF dom sigTop sigNext sig → ASTZipperL dom (sigNext ::: sigs) sig → ASTZipperL dom (sigTop ::: sigNext ::: sigs) sig
 
+data ASTLocationL dom (sigHoles :: HList) sig where
+  LLoc :: AST dom sigHole → ASTZipperL dom (sigHole ::: sigs) sig → ASTLocationL dom (sigHole ::: sigs) sig
+
 -- Let's "prove" (as far as possible in Haskell) that these structures are
 -- essentially isomorphic.
 zipperIsoL :: ASTZipperL dom sigHoles sig → ASTZipper dom sigHoles sig
@@ -74,6 +77,11 @@ zipperIsoR ZHole = LNil
 zipperIsoR (ZLeft rest arg) = LCons (FZLeft arg) (zipperIsoR rest)
 zipperIsoR (ZRight f rest) = LCons (FZRight f) (zipperIsoR rest)
 
+locIsoL :: ASTLocationL dom sigHoles sig → ASTLocation dom sigHoles sig
+locIsoR :: ASTLocation dom sigHoles sig → ASTLocationL dom sigHoles sig
+
+locIsoL (LLoc ast z) = Loc ast (zipperIsoL z)
+locIsoR (Loc ast z) = LLoc ast (zipperIsoR z)
 
 -- Functions for "normal" zippers.
 goLeft :: ASTLocation dom (Full a ::: sig ::: sigs) sigTot → ASTLocation dom (a :-> sig ::: sig ::: sigs) sigTot
@@ -99,6 +107,33 @@ merge :: AST dom sigHole → ASTZipper dom (sigHole ::: sigs) sig → AST dom si
 merge ast ZHole = ast
 merge ast (ZLeft parent right) = merge (ast :$ right) parent
 merge ast (ZRight left parent) = merge (left :$ ast)  parent
+
+-- Since ASTZipper and ASTZipperL are computably isomorphic, we wouldn't need to
+-- write these functions explicitly (we could simply precompose and postcompose
+-- the base functions with the two sides of the isomorphism, that is, apply the
+-- category-theoretic (zipperIsoR ← zipperIsoL)). But it's comforting that we
+-- can write them directly.
+
+goLeftL :: ASTLocationL dom (Full a ::: sig ::: sigs) sigTot → ASTLocationL dom (a :-> sig ::: sig ::: sigs) sigTot
+goLeftL (LLoc arg (LCons (FZRight f) parent)) = LLoc f (LCons (FZLeft arg) parent)
+
+goRightL :: ASTLocationL dom (a :-> sig ::: sig ::: sigs) sigTot → ASTLocationL dom (Full a ::: sig ::: sigs) sigTot
+goRightL (LLoc f (LCons (FZLeft arg) parent)) = LLoc arg (LCons (FZRight f) parent)
+
+goUpL :: ASTLocationL dom (sig1 ::: sig ::: sigs) sigTot → ASTLocationL dom (sig ::: sigs) sigTot
+goUpL (LLoc f   (LCons (FZLeft  arg) parent)) = LLoc (f :$ arg) parent
+goUpL (LLoc arg (LCons (FZRight f)   parent)) = LLoc (f :$ arg) parent
+
+goFirstL :: ASTLocationL dom (sig ::: sigs) sigTot → (∀ a. ASTLocationL dom (a :-> sig ::: sig ::: sigs) sigTot → b) → b
+goFirstL (LLoc (f :$ s) zip) k = k $ LLoc f (LCons (FZLeft s) zip)
+
+goSecondL :: ASTLocationL dom sigs sigTot → (∀ a. ASTLocationL dom (Full a ::: sigs) sigTot → b) → b
+goSecondL (LLoc (f :$ s) zip) k = k $ LLoc s (LCons (FZRight f) zip)
+
+mergeL :: AST dom sigHole → ASTZipperL dom (sigHole ::: sigs) sig → AST dom sig
+mergeL ast LNil = ast
+mergeL ast (LCons (FZLeft right) parent) = mergeL (ast :$ right) parent
+mergeL ast (LCons (FZRight left) parent) = mergeL (left :$ ast)  parent
 
 
 ex1M :: Expr Int
