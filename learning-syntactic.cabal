@@ -18,8 +18,9 @@ cabal-version:       >=1.10
 library
   exposed-modules:     Compiler, Syntactic, Sec7UndecidableInstances, Zippers
   -- other-modules:
-  -- XXX Move flags here from code?
-  other-extensions:    RankNTypes, TypeFamilies, FlexibleContexts, NoMonomorphismRestriction, FlexibleInstances, MultiParamTypeClasses, TypeOperators, GADTs, OverlappingInstances, ViewPatterns, UnicodeSyntax
+
+  default-extensions:  TypeOperators, UnicodeSyntax, GADTs
+--TypeFamilies, FlexibleContexts, NoMonomorphismRestriction, FlexibleInstances, MultiParamTypeClasses, OverlappingInstances, ViewPatterns,
   build-depends:       base >=4.7 && <4.8, transformers, mtl
   hs-source-dirs:      src
   default-language:    Haskell2010

@@ -1,9 +1,6 @@
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE UnicodeSyntax #-}
 {-# LANGUAGE PatternSynonyms #-}
 
 -- | Segregate code requiring UndecidableInstances.

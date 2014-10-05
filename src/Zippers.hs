@@ -1,8 +1,5 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE UnicodeSyntax #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE DataKinds #-}
 
