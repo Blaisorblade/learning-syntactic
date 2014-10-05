@@ -1,6 +1,4 @@
 {-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE DataKinds #-}
 
 module Zippers where

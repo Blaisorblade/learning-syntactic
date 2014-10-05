@@ -1,6 +1,4 @@
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 
 -- | Segregate code requiring UndecidableInstances.
