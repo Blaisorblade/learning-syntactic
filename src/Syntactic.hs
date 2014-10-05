@@ -32,7 +32,7 @@ infixl 1 :$
 
 -- A valid dom. (Nominal subtyping would help here).
 data NUM a where
-  -- Num :: Int -> NUM Int -- NO! FAils at zeroPOne
+  -- Num :: Int -> NUM Int -- NO! Fails at zeroPOne
   Num :: Int -> NUM (Full Int)
   Add :: NUM (Int :-> Int :-> Full Int)
   Mul :: NUM (Int :-> Int :-> Full Int)
