@@ -53,15 +53,9 @@ goLeft (Loc arg (ZRight f parent)) = Loc f (ZLeft parent arg)
 goRight :: ASTLocation dom (a :-> sig ::: sig ::: sigs) sigTot → ASTLocation dom (Full a ::: sig ::: sigs) sigTot
 goRight (Loc f (ZLeft parent arg)) = Loc arg (ZRight f parent)
 
-goLeftUp :: ASTLocation dom (a :-> sig ::: sig ::: sigs) sigTot -> ASTLocation dom (sig ::: sigs) sigTot
-goLeftUp (Loc f (ZLeft parent arg))  = Loc (f :$ arg) parent
-
-goRightUp :: ASTLocation dom (Full a ::: sig ::: sigs) sigTot → ASTLocation dom (sig ::: sigs) sigTot
-goRightUp (Loc arg (ZRight f parent)) = Loc (f :$ arg) parent
-
 goUp :: ASTLocation dom (sig1 ::: sig ::: sigs) sigTot → ASTLocation dom (sig ::: sigs) sigTot
-goUp l@(Loc f   (ZLeft parent arg)) = goLeftUp l
-goUp l@(Loc arg (ZRight f parent))  = goRightUp l
+goUp (Loc f   (ZLeft parent arg)) = Loc (f :$ arg) parent
+goUp (Loc arg (ZRight f parent))  = Loc (f :$ arg) parent
 
 mergeLoc :: ASTLocation dom sigHoles sig → AST dom sig
 mergeLoc (Loc ast zip) = merge ast zip
