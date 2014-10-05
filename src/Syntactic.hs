@@ -21,15 +21,15 @@ import Data.Monoid (mconcat)
 -- Sec. 2.2
 
 newtype Full a  = Full { result :: a }
-newtype a :-> b = Partial (a -> b)
-infixr :->
+newtype a :→ b = Partial (a → b)
+infixr :→
 
 -- | dom is the type of allowed symbols (see the direct use in the Sym
 -- constructor), so it describes the primitives available in an AST.
 
 data AST dom sig where
-  Sym  :: dom sig -> AST dom sig
-  (:$) :: AST dom (a :-> sig) -> AST dom (Full a) -> AST dom sig
+  Sym  :: dom sig → AST dom sig
+  (:$) :: AST dom (a :→ sig) → AST dom (Full a) → AST dom sig
 
 type ASTF dom res = AST dom (Full res)
 
@@ -37,17 +37,17 @@ infixl 1 :$
 
 -- A valid dom. (Nominal subtyping would help here).
 data NUM a where
-  -- Num :: Int -> NUM Int -- NO! Fails at zeroPOne
-  Num :: Int -> NUM (Full Int)
-  Add :: NUM (Int :-> Int :-> Full Int)
-  Mul :: NUM (Int :-> Int :-> Full Int)
+  -- Num :: Int → NUM Int -- NO! Fails at zeroPOne
+  Num :: Int → NUM (Full Int)
+  Add :: NUM (Int :→ Int :→ Full Int)
+  Mul :: NUM (Int :→ Int :→ Full Int)
 
 type Expr3 a = ASTF NUM a
 
-num3 :: Int -> Expr3 Int
+num3 :: Int → Expr3 Int
 num3 = Sym . Num
 
-add3 :: Expr3 Int -> Expr3 Int -> Expr3 Int
+add3 :: Expr3 Int → Expr3 Int → Expr3 Int
 add3 a b = Sym Add :$ a :$ b
 
 -- Examples
@@ -58,12 +58,12 @@ zeroPOne3 = add3 zero3 $ num3 1
 zeroPZeroPOne3 = add3 zero3 zeroPOne3
 
 -- Sec. 2.3
-evalNUM :: Expr3 a -> a
+evalNUM :: Expr3 a → a
 evalNUM (Sym (Num n)) = n
 evalNUM (Sym Add :$ a :$ b) = evalNUM a + evalNUM b
 evalNUM (Sym Mul :$ a :$ b) = evalNUM a * evalNUM b
 
-renderNUM :: Expr3 a -> String
+renderNUM :: Expr3 a → String
 renderNUM (Sym (Num n)) = show n
 renderNUM (Sym Add :$ a :$ b) = "(" ++ renderNUM a ++ " + " ++ renderNUM b ++ ")"
 renderNUM (Sym Mul :$ a :$ b) = "(" ++ renderNUM a ++ " * " ++ renderNUM b ++ ")"
@@ -73,8 +73,8 @@ renderNUM (Sym Mul :$ a :$ b) = "(" ++ renderNUM a ++ " * " ++ renderNUM b ++ ")
 --- Listing 1.
 
 data (dom1 :+: dom2) a where
-  InjL :: dom1 a -> (dom1 :+: dom2) a
-  InjR :: dom2 a -> (dom1 :+: dom2) a
+  InjL :: dom1 a → (dom1 :+: dom2) a
+  InjR :: dom2 a → (dom1 :+: dom2) a
 
 infixr :+: -- We need this line because left-nested uses don't fully work --
            -- commenting this out makes exSize3 fail.
@@ -84,7 +84,7 @@ data Empty
 
 -- | sup is a sum which can also contains sub.
 class Project sub sup where
-  prj :: sup a -> Maybe (sub a)
+  prj :: sup a → Maybe (sub a)
 
 instance Project sub sup where
   prj _ = Nothing
@@ -96,18 +96,18 @@ instance Project sym1 (sym1 :+: sym3) where
   prj (InjL c) = Just c
   prj (InjR _) = Nothing
 
-instance Project sym1 sym3 => Project sym1 (sym2 :+: sym3) where
+instance Project sym1 sym3 ⇒ Project sym1 (sym2 :+: sym3) where
   prj (InjL _) = Nothing
   prj (InjR c) = prj c
 
-instance Project sub sup => Project sub (AST sup) where
+instance Project sub sup ⇒ Project sub (AST sup) where
   prj (Sym a) = prj a
   prj (a :$ b) = Nothing
 
 -- | sup is a sum which must contains sub.
 
-class Project sub sup => (sub :<: sup) where
-  inj :: sub a -> sup a
+class Project sub sup ⇒ (sub :<: sup) where
+  inj :: sub a → sup a
 
 instance (sub :<: sub) where
   inj = id
@@ -115,41 +115,41 @@ instance (sub :<: sub) where
 instance sym1 :<: (sym1 :+: sym3) where
   inj = InjL
 
-instance (sym1 :<: sym3) => sym1 :<: (sym2 :+: sym3) where
+instance (sym1 :<: sym3) ⇒ sym1 :<: (sym2 :+: sym3) where
   inj = InjR . inj
 
-instance (sub :<: sup) => sub :<: AST sup where
+instance (sub :<: sup) ⇒ sub :<: AST sup where
   inj = Sym . inj
 
 --- End Listing 2
 
 --- Listing 3
 data Logic a where
-  Not :: Logic (Bool :-> Full Bool)
-  Eq  :: Eq a => Logic (a :-> a :-> Full Bool)
+  Not :: Logic (Bool :→ Full Bool)
+  Eq  :: Eq a ⇒ Logic (a :→ a :→ Full Bool)
 
 data If a where
-  If :: If (Bool :-> a :-> a :-> Full a)
+  If :: If (Bool :→ a :→ a :→ Full a)
 
 type Expr a = ASTF (NUM :+: Logic :+: If) a
 
-num :: (NUM :<: dom) => Int -> ASTF dom Int
+num :: (NUM :<: dom) ⇒ Int → ASTF dom Int
 num = inj . Num
 
-(⊕) :: (NUM :<: dom) =>
-       ASTF dom Int -> ASTF dom Int -> ASTF dom Int
+(⊕) :: (NUM :<: dom) ⇒
+       ASTF dom Int → ASTF dom Int → ASTF dom Int
 a ⊕ b = inj Add :$ a :$ b
 
-(⊙) :: (NUM :<: dom) =>
-       ASTF dom Int -> ASTF dom Int -> ASTF dom Int
+(⊙) :: (NUM :<: dom) ⇒
+       ASTF dom Int → ASTF dom Int → ASTF dom Int
 a ⊙ b = inj Mul :$ a :$ b
 
-(≣) :: (Logic :<: dom, Eq a) =>
-       ASTF dom a -> ASTF dom a -> ASTF dom Bool
+(≣) :: (Logic :<: dom, Eq a) ⇒
+       ASTF dom a → ASTF dom a → ASTF dom Bool
 a ≣ b = inj Eq :$ a :$ b
 
-cond :: (If :<: dom) =>
-       ASTF dom Bool -> ASTF dom a -> ASTF dom a -> ASTF dom a
+cond :: (If :<: dom) ⇒
+       ASTF dom Bool → ASTF dom a → ASTF dom a → ASTF dom a
 cond c t e = inj If :$ c :$ t :$ e
 
 infixl 6 ⊕
@@ -157,17 +157,17 @@ infixl 7 ⊙
 
 --- End Listing 3
 
-nnot :: (Logic :<: dom) => ASTF dom Bool -> ASTF dom Bool
+nnot :: (Logic :<: dom) ⇒ ASTF dom Bool → ASTF dom Bool
 nnot a = inj Not :$ a
 
-ex2 :: (NUM :<: dom) => ASTF dom Int
+ex2 :: (NUM :<: dom) ⇒ ASTF dom Int
 ex2 = (num 5 ⊕ num 0) ⊙ num 6
 
-ex3 :: (NUM :<: dom, Logic :<: dom) => ASTF dom Bool
+ex3 :: (NUM :<: dom, Logic :<: dom) ⇒ ASTF dom Bool
 ex3 = ex2 ≣ ex2
 
 -- From Sec. 4.3
-ex4 :: (NUM :<: dom, Logic :<: dom, If :<: dom) => ASTF dom Int
+ex4 :: (NUM :<: dom, Logic :<: dom, If :<: dom) ⇒ ASTF dom Int
 ex4 = cond (num 1 ≣ num 2) (num 3) ex2
 
 ex2M :: Expr Int
@@ -178,21 +178,21 @@ ex4M :: Expr Int
 ex4M = ex4
 
 -- Sec. 3.1
-size :: AST dom a -> Int
+size :: AST dom a → Int
 size (Sym _) = 1
 size (a :$ b) = size a + size b
 
 exSize2 = size ex2M
 exSize3 = size ex3M
 
-countAdds :: (NUM :<: dom) => AST dom a -> Int
+countAdds :: (NUM :<: dom) ⇒ AST dom a → Int
 countAdds (a :$ b)    = countAdds a + countAdds b
 countAdds s -- `s` was `Sym s` in the paper.
   | Just Add <- prj s = 1
   | otherwise         = 0
 
 -- Sec. 3.2
-optAddTop :: (NUM :<: dom) => AST dom a -> AST dom a
+optAddTop :: (NUM :<: dom) ⇒ AST dom a → AST dom a
 optAddTop (add :$ a :$ zero)
   | Just Add <- prj add
   , Just (Num 0) <- prj zero = a
@@ -203,18 +203,18 @@ optAddTop a = a
 -- XXX turn these into explicitly bidirectional patterns, after the code merged
 -- in https://ghc.haskell.org/trac/ghc/ticket/8581 (when it was first fixed) is
 -- released.
-pattern ADD <- Sym (prj -> Just Add)
-pattern NUM n <- Sym (prj -> Just (Num n))
+pattern ADD <- Sym (prj → Just Add)
+pattern NUM n <- Sym (prj → Just (Num n))
 
 -- countAdds, implemented using pattern synonyms.
-countAdds2 :: (NUM :<: dom) => AST dom a -> Int
+countAdds2 :: (NUM :<: dom) ⇒ AST dom a → Int
 
 countAdds2 (a :$ b) = countAdds a + countAdds b
 countAdds2 ADD      = 1
 countAdds2 _        = 0
 
 -- optAddTop, renamed and simplified through pattern synonyms.
-optAddRule :: (NUM :<: dom) => AST dom a -> AST dom a
+optAddRule :: (NUM :<: dom) ⇒ AST dom a → AST dom a
 
 optAddRule (ADD :$ a :$ NUM 0) = a
 optAddRule a = a
@@ -222,27 +222,27 @@ optAddRule a = a
 -- Sec. 4.1
 type family Denotation sig
 type instance Denotation (Full a) = a
-type instance Denotation (a :-> sig) = a -> Denotation sig
+type instance Denotation (a :→ sig) = a → Denotation sig
 
 evalG ∷ (∀ a.     dom a → Denotation a)
       → (∀ a. AST dom a → Denotation a)
 evalG f (Sym s)  = f s
 evalG f (s :$ a) = evalG f s (evalG f a)
 
-evalSymNUM :: NUM a -> Denotation a
+evalSymNUM :: NUM a → Denotation a
 evalSymNUM (Num n) = n
 evalSymNUM Add     = (+)
 evalSymNUM Mul     = (*)
 
 class Eval expr where
-  eval ∷ expr a -> Denotation a
+  eval ∷ expr a → Denotation a
 
 -- Boilerplate for generic functions
-instance (Eval sub1, Eval sub2) => Eval (sub1 :+: sub2) where
+instance (Eval sub1, Eval sub2) ⇒ Eval (sub1 :+: sub2) where
   eval (InjL v) = eval v
   eval (InjR v) = eval v
 
-instance Eval dom => Eval (AST dom) where
+instance Eval dom ⇒ Eval (AST dom) where
   eval (Sym s) = eval s
   eval (f :$ a) = eval f (eval a)
 
@@ -256,22 +256,22 @@ instance Eval Logic where
   eval Eq = (==)
   eval Not = not
 instance Eval If where
-  eval If = \ c t e -> if c then t else e
+  eval If = \ c t e → if c then t else e
 
 -- Sec. 4.2
 
 class Render expr where
-  renderArgs :: expr a -> [String] -> String
+  renderArgs :: expr a → [String] → String
 
 -- Boilerplate
-render :: Render expr => expr a -> String
+render :: Render expr ⇒ expr a → String
 render a = renderArgs a []
 
-instance (Render sub1, Render sub2) => Render (sub1 :+: sub2) where
+instance (Render sub1, Render sub2) ⇒ Render (sub1 :+: sub2) where
   renderArgs (InjL v) = renderArgs v
   renderArgs (InjR v) = renderArgs v
 
-instance Render dom => Render (AST dom) where
+instance Render dom ⇒ Render (AST dom) where
   renderArgs (Sym s)  xs = renderArgs s xs
   renderArgs (f :$ a) xs = renderArgs f (render a : xs)
 
@@ -294,7 +294,7 @@ fold ∷ ∀ dom res. (∀ a. dom a → [res] → res)
                 → (∀ a. AST dom a →     res)
 fold f a = go a []
   where
-    go :: AST dom a -> [res] -> res
+    go :: AST dom a → [res] → res
     go (Sym s)  as = f s as
     go (s :$ a) as = go s (fold f a : as)
 
@@ -303,19 +303,19 @@ render2 = fold renderArgs
 
 -- Term equality
 class Equality expr where
-  -- equal :: expr a -> expr a -> Bool
+  -- equal :: expr a → expr a → Bool
   --
   -- The type above is too strict, so it cannot be used for application nodes,
   -- since corresponding subterms are not guaranteed to have the same type.
-  equal :: expr a -> expr b -> Bool
+  equal :: expr a → expr b → Bool
 
 -- Boilerplate-ish instances.
-instance (Equality sub1, Equality sub2) => Equality (sub1 :+: sub2) where
+instance (Equality sub1, Equality sub2) ⇒ Equality (sub1 :+: sub2) where
   equal (InjL v1) (InjL v2) = equal v1 v2
   equal (InjR v1) (InjR v2) = equal v1 v2
   equal _         _         = False
 
-instance Equality dom => Equality (AST dom) where
+instance Equality dom ⇒ Equality (AST dom) where
   equal (Sym s1)   (Sym s2)   = equal s1 s2
   equal (f1 :$ s1) (f2 :$ s2) = equal f1 f2 && equal s1 s2
   equal _          _          = False
@@ -341,7 +341,7 @@ instance Equality If where
 
 type family Result sig
 type instance Result (Full a) = a
-type instance Result (a :-> b) = Result b
+type instance Result (a :→ b) = Result b
 
 -- The version I came up with. In this version, there are less
 -- `Full` wrappers around stuff (compare argEx here and below).
@@ -350,11 +350,11 @@ type instance Result (a :-> b) = Result b
 
 data Args c sig where
   Nil :: Args c (Full a)
-  (:*) :: c (Result (Full a)) -> Args c sig -> Args c (a :-> sig)
+  (:*) :: c (Result (Full a)) → Args c sig → Args c (a :→ sig)
 
 infixr :*
 
-argEx :: Args Maybe (Int :-> Bool :-> Full Char)
+argEx :: Args Maybe (Int :→ Bool :→ Full Char)
 argEx = Just 1 :* Just False :* Nil
 
 typedFold :: ∀ dom c.
@@ -378,16 +378,16 @@ type family Result sig
 
 -- Note that Result removes the Full type constructor...
 type instance Result (Full a) = a
-type instance Result (a :-> b) = Result b
+type instance Result (a :→ b) = Result b
 -- But we often do use Full (Result sig)!
 
 data Args c sig where
   Nil :: Args c (Full a)
-  (:*) :: c (Full a) -> Args c sig -> Args c (a :-> sig)
+  (:*) :: c (Full a) → Args c sig → Args c (a :→ sig)
 
 infixr :*
 
-argEx :: Args Maybe (Int :-> Bool :-> Full Char)
+argEx :: Args Maybe (Int :→ Bool :→ Full Char)
 argEx = Just (Full 1) :* Just (Full False) :* Nil
 
 -- Sec 6.2: Type-safe fold
@@ -408,10 +408,10 @@ everywhere ∷ (∀ a. ASTF dom a → ASTF dom a) →
              (∀ a. ASTF dom a → ASTF dom a)
 everywhere f = typedFold (appArgs2 f)
 
-appArgs2 :: (∀ a. ASTF dom a → ASTF dom a) → dom sig -> Args (AST dom) sig -> AST dom (Full (Result sig))
+appArgs2 :: (∀ a. ASTF dom a → ASTF dom a) → dom sig → Args (AST dom) sig → AST dom (Full (Result sig))
 appArgs2 f = \s → f . appArgs (Sym s)
 
-appArgs :: AST dom sig -> Args (AST dom) sig -> AST dom (Full (Result sig))
+appArgs :: AST dom sig → Args (AST dom) sig → AST dom (Full (Result sig))
 appArgs s Nil = s
 appArgs s (a :* as) = appArgs (s :$ a) as
 
@@ -497,8 +497,8 @@ type StmtEnc   = ASTF (ExprDom :+: StmtDom) S
 
 data ExprDom a where
   NumSym  :: Int → ExprDom (Full (E Int))
-  AddSym  ::        ExprDom (E Int :-> E Int :-> Full (E Int))
-  ExecSym :: Var → ExprDom (S :-> Full (E a))
+  AddSym  ::        ExprDom (E Int :→ E Int :→ Full (E Int))
+  ExecSym :: Var → ExprDom (S :→ Full (E a))
 data StmtDom a where
-  AssignSym ∷ Var → StmtDom (E a :-> Full S)
-  SeqSym    ::        StmtDom (S :-> S :-> Full S)
+  AssignSym ∷ Var → StmtDom (E a :→ Full S)
+  SeqSym    ::        StmtDom (S :→ S :→ Full S)

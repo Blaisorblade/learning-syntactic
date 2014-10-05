@@ -15,14 +15,14 @@ import Syntactic
 class OptAdd sym dom where
   optAddSym ∷ sym a → Args (AST dom) a → AST dom (Full (Result a))
 
-optAdd :: OptAdd dom dom => ASTF dom a -> AST dom (Full a)
+optAdd :: OptAdd dom dom ⇒ ASTF dom a → AST dom (Full a)
 optAdd = query optAddSym
 
 instance (OptAdd sub1 dom, OptAdd sub2 dom) ⇒ OptAdd (sub1 :+: sub2) dom where
   optAddSym (InjL s) = optAddSym s
   optAddSym (InjR s) = optAddSym s
 
-optAddDefault :: (OptAdd dom dom, sym :<: dom) =>
+optAddDefault :: (OptAdd dom dom, sym :<: dom) ⇒
   sym a → Args (AST dom) a → AST dom (Full (Result a))
 optAddDefault s = appArgs (Sym (inj s)) . mapArgs optAdd
 

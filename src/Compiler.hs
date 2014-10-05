@@ -26,24 +26,24 @@ newtype ResultLoc = R {unR :: VarId}
 newtype Program = P { unP :: [String] }
   deriving Monoid
 type CodeMonad = WriterT Program (State VarId)
-type CodeGen = ResultLoc -> CodeMonad ()
+type CodeGen = ResultLoc → CodeMonad ()
 
 
 freshVar :: CodeMonad VarId
 freshVar = do v <- get; put $ V (unV v + 1); return v
 
-var :: VarId -> String
+var :: VarId → String
 var = ("v" ++) . show . unV
 
-(=:=) :: VarId -> String -> String
+(=:=) :: VarId → String → String
 loc =:= expr = unwords [var loc, "=", expr]
 
 indent = P . map ("  " ++) . unP
 --- (Derived from) Listing 5
 
 -- Core
-class Render expr => Compile expr where
-  compileArgs :: expr a -> [CodeGen] -> CodeGen
+class Render expr ⇒ Compile expr where
+  compileArgs :: expr a → [CodeGen] → CodeGen
   compileArgs expr args loc = do
     argVars <- replicateM (length args) freshVar
     zipWithM ($) args (map R argVars)
@@ -67,14 +67,14 @@ compileTop2 a =
 
 -- Boilerplate
 -- This is analogous to render.
-compile :: Compile expr => expr a -> CodeGen
+compile :: Compile expr ⇒ expr a → CodeGen
 compile s = compileArgs s []
 
-instance (Compile sub1, Compile sub2) => Compile (sub1 :+: sub2) where
+instance (Compile sub1, Compile sub2) ⇒ Compile (sub1 :+: sub2) where
   compileArgs (InjL expr) = compileArgs expr
   compileArgs (InjR expr) = compileArgs expr
 
-instance Compile dom => Compile (AST dom) where
+instance Compile dom ⇒ Compile (AST dom) where
   compileArgs (Sym s) xs = compileArgs s xs
   compileArgs (f :$ s) xs = compileArgs f (compile s : xs)
 

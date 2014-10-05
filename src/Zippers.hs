@@ -41,19 +41,19 @@ data ASTZipper dom (sigHoles :: HList) sig where
   -- and a parent zipper. The hole signature of the resulting zipper is bigger,
   -- since it needs to accept as parameter the right sibling we provide.
   ZLeft :: ASTZipper dom (sig ::: sigs) sigTot → AST dom (Full a)
-          → ASTZipper dom (a :-> sig ::: sig ::: sigs) sigTot
+          → ASTZipper dom (a :→ sig ::: sig ::: sigs) sigTot
   -- | A zipper for a hole on the right. This zipper provides the left sibling
   -- and a parent zipper. The hole signature of the resulting zipper is the
   -- argument type for the given left sibling.
-  ZRight :: AST dom (a :-> sig) → ASTZipper dom (sig ::: sigs) sigTot -> ASTZipper dom (Full a ::: sig ::: sigs) sigTot
+  ZRight :: AST dom (a :→ sig) → ASTZipper dom (sig ::: sigs) sigTot → ASTZipper dom (Full a ::: sig ::: sigs) sigTot
 
 -- Instead of having a type representing the complete zipper, we
 -- can also have separate individual contexts. The only downside is that we
 -- need a specialized list type for that.
 
 data ASTZipperF dom sigTop sigNext sig where
-  FZLeft  :: AST dom (Full a) → ASTZipperF dom (a :-> sig) sig sigTot
-  FZRight :: AST dom (a :-> sig) → ASTZipperF dom (Full a) sig sigTot
+  FZLeft  :: AST dom (Full a) → ASTZipperF dom (a :→ sig) sig sigTot
+  FZRight :: AST dom (a :→ sig) → ASTZipperF dom (Full a) sig sigTot
 
 -- The same structure essentially appears in Agda's standard library (it's a
 -- reflexive transitive closure IIRC), except for the extra `sig` parameter.
@@ -84,17 +84,17 @@ locIsoL (LLoc ast z) = Loc ast (zipperIsoL z)
 locIsoR (Loc ast z) = LLoc ast (zipperIsoR z)
 
 -- Functions for "normal" zippers.
-goLeft :: ASTLocation dom (Full a ::: sig ::: sigs) sigTot → ASTLocation dom (a :-> sig ::: sig ::: sigs) sigTot
+goLeft :: ASTLocation dom (Full a ::: sig ::: sigs) sigTot → ASTLocation dom (a :→ sig ::: sig ::: sigs) sigTot
 goLeft (Loc arg (ZRight f parent)) = Loc f (ZLeft parent arg)
 
-goRight :: ASTLocation dom (a :-> sig ::: sig ::: sigs) sigTot → ASTLocation dom (Full a ::: sig ::: sigs) sigTot
+goRight :: ASTLocation dom (a :→ sig ::: sig ::: sigs) sigTot → ASTLocation dom (Full a ::: sig ::: sigs) sigTot
 goRight (Loc f (ZLeft parent arg)) = Loc arg (ZRight f parent)
 
 goUp :: ASTLocation dom (sig1 ::: sig ::: sigs) sigTot → ASTLocation dom (sig ::: sigs) sigTot
 goUp (Loc f   (ZLeft parent arg)) = Loc (f :$ arg) parent
 goUp (Loc arg (ZRight f parent))  = Loc (f :$ arg) parent
 
-goFirst :: ASTLocation dom (sig ::: sigs) sigTot → (∀ a. ASTLocation dom (a :-> sig ::: sig ::: sigs) sigTot → b) → b
+goFirst :: ASTLocation dom (sig ::: sigs) sigTot → (∀ a. ASTLocation dom (a :→ sig ::: sig ::: sigs) sigTot → b) → b
 goFirst (Loc (f :$ s) zip) k = k $ Loc f (ZLeft zip s)
 
 goSecond :: ASTLocation dom sigs sigTot → (∀ a. ASTLocation dom (Full a ::: sigs) sigTot → b) → b
@@ -114,17 +114,17 @@ merge ast (ZRight left parent) = merge (left :$ ast)  parent
 -- category-theoretic (zipperIsoR ← zipperIsoL)). But it's comforting that we
 -- can write them directly.
 
-goLeftL :: ASTLocationL dom (Full a ::: sig ::: sigs) sigTot → ASTLocationL dom (a :-> sig ::: sig ::: sigs) sigTot
+goLeftL :: ASTLocationL dom (Full a ::: sig ::: sigs) sigTot → ASTLocationL dom (a :→ sig ::: sig ::: sigs) sigTot
 goLeftL (LLoc arg (LCons (FZRight f) parent)) = LLoc f (LCons (FZLeft arg) parent)
 
-goRightL :: ASTLocationL dom (a :-> sig ::: sig ::: sigs) sigTot → ASTLocationL dom (Full a ::: sig ::: sigs) sigTot
+goRightL :: ASTLocationL dom (a :→ sig ::: sig ::: sigs) sigTot → ASTLocationL dom (Full a ::: sig ::: sigs) sigTot
 goRightL (LLoc f (LCons (FZLeft arg) parent)) = LLoc arg (LCons (FZRight f) parent)
 
 goUpL :: ASTLocationL dom (sig1 ::: sig ::: sigs) sigTot → ASTLocationL dom (sig ::: sigs) sigTot
 goUpL (LLoc f   (LCons (FZLeft  arg) parent)) = LLoc (f :$ arg) parent
 goUpL (LLoc arg (LCons (FZRight f)   parent)) = LLoc (f :$ arg) parent
 
-goFirstL :: ASTLocationL dom (sig ::: sigs) sigTot → (∀ a. ASTLocationL dom (a :-> sig ::: sig ::: sigs) sigTot → b) → b
+goFirstL :: ASTLocationL dom (sig ::: sigs) sigTot → (∀ a. ASTLocationL dom (a :→ sig ::: sig ::: sigs) sigTot → b) → b
 goFirstL (LLoc (f :$ s) zip) k = k $ LLoc f (LCons (FZLeft s) zip)
 
 goSecondL :: ASTLocationL dom sigs sigTot → (∀ a. ASTLocationL dom (Full a ::: sigs) sigTot → b) → b
