@@ -47,6 +47,35 @@ data ASTZipper dom (sigHoles :: HList) sig where
   -- argument type for the given left sibling.
   ZRight :: AST dom (a :-> sig) → ASTZipper dom (sig ::: sigs) sigTot -> ASTZipper dom (Full a ::: sig ::: sigs) sigTot
 
+-- Instead of having a type representing the complete zipper, we
+-- can also have separate individual contexts. The only downside is that we
+-- need a specialized list type for that.
+
+data ASTZipperF dom sigTop sigNext sig where
+  FZLeft  :: AST dom (Full a) → ASTZipperF dom (a :-> sig) sig sigTot
+  FZRight :: AST dom (a :-> sig) → ASTZipperF dom (Full a) sig sigTot
+
+-- The same structure essentially appears in Agda's standard library (it's a
+-- reflexive transitive closure IIRC), except for the extra `sig` parameter.
+data ASTZipperL dom (sigHoles :: HList) sig where
+  LNil :: ASTZipperL dom (sig ::: HNil) sig
+  LCons :: ASTZipperF dom sigTop sigNext sig → ASTZipperL dom (sigNext ::: sigs) sig → ASTZipperL dom (sigTop ::: sigNext ::: sigs) sig
+
+-- Let's "prove" (as far as possible in Haskell) that these structures are
+-- essentially isomorphic.
+zipperIsoL :: ASTZipperL dom sigHoles sig → ASTZipper dom sigHoles sig
+zipperIsoR :: ASTZipper dom sigHoles sig → ASTZipperL dom sigHoles sig
+
+zipperIsoL LNil = ZHole
+zipperIsoL (LCons (FZLeft arg) zips) = ZLeft (zipperIsoL zips) arg
+zipperIsoL (LCons (FZRight f) zips) = ZRight f (zipperIsoL zips)
+
+zipperIsoR ZHole = LNil
+zipperIsoR (ZLeft rest arg) = LCons (FZLeft arg) (zipperIsoR rest)
+zipperIsoR (ZRight f rest) = LCons (FZRight f) (zipperIsoR rest)
+
+
+-- Functions for "normal" zippers.
 goLeft :: ASTLocation dom (Full a ::: sig ::: sigs) sigTot → ASTLocation dom (a :-> sig ::: sig ::: sigs) sigTot
 goLeft (Loc arg (ZRight f parent)) = Loc f (ZLeft parent arg)
 
