@@ -20,15 +20,15 @@ library
   -- other-modules:
 
   default-extensions: TypeOperators, UnicodeSyntax,
-		      -- Flags which are common
-		      GADTs, NoMonomorphismRestriction, RankNTypes, MultiParamTypeClasses,
-		      -- Flags which are less common but which still seem "obviously safe"
-		      GeneralizedNewtypeDeriving,
-		      -- Cool ones, which might have disadvantages (I don't
-		      -- understand them well enough).
-		      FlexibleContexts, FlexibleInstances, ScopedTypeVariables
-		      -- Excluded: flags which feel uncommon enough to call
-		      -- attention to their use in the source.
+                      -- Flags which are common
+                      GADTs, NoMonomorphismRestriction, RankNTypes, MultiParamTypeClasses,
+                      -- Flags which are less common but which still seem "obviously safe"
+                      GeneralizedNewtypeDeriving,
+                      -- Cool ones, which might have disadvantages (I don't
+                      -- understand them well enough).
+                      FlexibleContexts, FlexibleInstances, ScopedTypeVariables
+                      -- Excluded: flags which feel uncommon enough to call
+                      -- attention to their use in the source.
 
   build-depends:       base >=4.7 && <4.8, transformers, mtl
   hs-source-dirs:      src
