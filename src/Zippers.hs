@@ -13,6 +13,12 @@ data HList where
   (:::) ∷ a → HList → HList
 infixr 5 :::
 
+{-
+data HList2 (ts ∷ [*]) where
+  HNil2 ∷ HList2 '[]
+  (::::) ∷ a → HList2 ts → HList2 (a ': ts)
+infixr 5 ::::
+-}
 -- | A location in an AST, where the hole's signature is the head of sigHoles,
 -- and the whole tree has signature sig. All ASTs involved share the same
 -- domain.
@@ -44,15 +50,6 @@ data ASTZipper dom (sigHoles ∷ HList) sig where
   -- argument type for the given left sibling.
   ZRight ∷ AST dom (a :→ sig) → ASTZipper dom (sig ::: sigs) sigTot → ASTZipper dom (Full a ::: sig ::: sigs) sigTot
 
--- Distinguish ASTZipper that only focus fully applied elements.
-type family HMap (f :: * → *) (h ∷ HList) ∷ HList
-type instance HMap f HNil = HNil
-type instance HMap f (x ::: xs) = f x ::: HMap f xs
-
-type ASTZipperFull dom sigHoles t = ASTZipper dom (HMap Full sigHoles) (Full t)
-
--- That does not allow focusing on non-rightmost elements.
-
 -- Instead of having a type representing the complete zipper, we
 -- can also have separate individual contexts. The only downside is that we
 -- need a specialized list type for that.
@@ -66,6 +63,39 @@ data ASTZipperF dom sigTop sigNext where
 data ASTZipperL dom (sigHoles ∷ HList) sig where
   LNil ∷ ASTZipperL dom (sig ::: HNil) sig
   LCons ∷ ASTZipperF dom sigTop sigNext → ASTZipperL dom (sigNext ::: sigs) sig → ASTZipperL dom (sigTop ::: sigNext ::: sigs) sig
+
+-- Distinguish ASTZipper that only focus fully applied elements.
+{-
+type family HMap (f :: j → k) (h ∷ HList) ∷ HList
+type instance HMap f HNil = HNil
+type instance HMap f (x ::: xs) = f x ::: HMap f xs
+
+type family FMap (f :: j → k) (h ∷ [j]) ∷ [k]
+type instance FMap f '[] = '[]
+type instance FMap f (x ': xs) = f x ': FMap f xs
+
+type ASTZipperFull dom sigHoles t = ASTZipper dom (HMap Full sigHoles) (Full t)
+
+-- That does not allow focusing on non-rightmost elements.
+-}
+
+data ASTZipperLF dom (sigHoless :: [HList]) sig where
+  LNilF :: ASTZipperLF dom ((Full sig ::: HNil) ': '[]) (Full sig)
+  LConsF :: ASTZipperL dom sigHoles (Full sigNext) → ASTZipperLF dom (((Full sigNext) ::: sigHoles2) ': sigHoless) (Full sigNext2) → ASTZipperLF dom (sigHoles ': (Full sigNext ::: sigHoles2) ': sigHoless) (Full sigNext2)
+
+{-
+type family Flip (f ∷ h → j → k) (a ∷ j) (b ∷ h) ∷ k where
+  Flip f a b = f b a
+
+type family Compose (f ∷ b → c) (g ∷ a → b) (x ∷ a) ∷ c where
+  Compose f g x = f (g x)
+
+type ASTZipperFull2 dom (sigHoless :: [HList]) sig = FMap (Flip (ASTZipperL dom) sig) (FMap (HMap Full) sigHoless)
+
+-- type ASTZipperFull2 dom (sigHoless :: [HList]) sig = FMap (Compose (Flip (ASTZipperL dom) sig) (HMap Full)) sigHoless
+
+-- type Foo dom = HList2 (ASTZipperFull2 dom ((Full Int ::: HNil) ': ((Int :→ Full Int) ::: Full Int ::: HNil) ': '[]) (Full Int))
+-}
 
 data ASTLocationL dom (sigHoles ∷ HList) sig where
   LLoc ∷ AST dom sigHole → ASTZipperL dom (sigHole ::: sigs) sig → ASTLocationL dom (sigHole ::: sigs) sig
@@ -167,6 +197,12 @@ ex1Z2 =
 
 (??) = flip
 
+-- ex1Z2Crazy ∷ (NUM :<: dom) ⇒ Foo dom
+-- ex1Z2Crazy = _ :::: _ :::: HNil2
+-- ZRight (inj Add) _
+
+-- ex1Z2Crazy = LCons (FZRight (inj Add)) (LCons (FZLeft (num 0)) LNil) :::: HNil2
+
 -- Note that each context (except ZHole) is represented as a function. If we
 -- defunctionalize them, we get something isomorphic to ASTZipperF, and one
 -- direction of the isomorphism is "essentially" LCons (only "essentially"
@@ -195,6 +231,20 @@ ex2Z1 =
         $ ZRight (inj Mul)
         $ ZLeft ?? (num 6)
         $ ZHole
+
+{-
+ex2Z1Crazy =
+       LCons (FZRight (inj Add :$ num 5)) LNil
+  :::: LCons (FZRight (inj Mul)) (LCons (FZLeft (num 6)) LNil)
+  :::: HNil2
+-}
+
+ex2Z1Crazy2 =
+  LConsF
+    (LCons (FZRight (inj Add :$ num 5)) LNil)
+    $ LConsF (LCons (FZRight (inj Mul)) (LCons (FZLeft (num 6)) LNil))
+    $ LNilF
+
 
 -- > renderSafe ex2M == renderSafe (mergeLoc ex2Z1 ∷ Expr Int)
 -- True
