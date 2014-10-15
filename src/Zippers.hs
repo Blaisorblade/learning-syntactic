@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE DataKinds #-}
 
@@ -41,6 +42,15 @@ data ASTZipper dom (sigHoles ∷ HList) sig where
   -- and a parent zipper. The hole signature of the resulting zipper is the
   -- argument type for the given left sibling.
   ZRight ∷ AST dom (a :→ sig) → ASTZipper dom (sig ::: sigs) sigTot → ASTZipper dom (Full a ::: sig ::: sigs) sigTot
+
+-- Distinguish ASTZipper that only focus fully applied elements.
+type family HMap (f :: * → *) (h ∷ HList) ∷ HList
+type instance HMap f HNil = HNil
+type instance HMap f (x ::: xs) = f x ::: HMap f xs
+
+type ASTZipperFull dom sigHoles t = ASTZipper dom (HMap Full sigHoles) (Full t)
+
+-- That does not allow focusing on non-rightmost elements.
 
 -- Instead of having a type representing the complete zipper, we
 -- can also have separate individual contexts. The only downside is that we
