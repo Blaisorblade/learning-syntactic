@@ -57,15 +57,15 @@ type ASTZipperFull dom sigHoles t = ASTZipper dom (HMap Full sigHoles) (Full t)
 -- can also have separate individual contexts. The only downside is that we
 -- need a specialized list type for that.
 
-data ASTZipperF dom sigTop sigNext sig where
-  FZLeft  ∷ AST dom (Full a) → ASTZipperF dom (a :→ sig) sig sigTot
-  FZRight ∷ AST dom (a :→ sig) → ASTZipperF dom (Full a) sig sigTot
+data ASTZipperF dom sigTop sigNext where
+  FZLeft  ∷ AST dom (Full a) → ASTZipperF dom (a :→ sig) sig
+  FZRight ∷ AST dom (a :→ sig) → ASTZipperF dom (Full a) sig
 
 -- The same structure essentially appears in Agda's standard library (it's a
 -- reflexive transitive closure IIRC), except for the extra `sig` parameter.
 data ASTZipperL dom (sigHoles ∷ HList) sig where
   LNil ∷ ASTZipperL dom (sig ::: HNil) sig
-  LCons ∷ ASTZipperF dom sigTop sigNext sig → ASTZipperL dom (sigNext ::: sigs) sig → ASTZipperL dom (sigTop ::: sigNext ::: sigs) sig
+  LCons ∷ ASTZipperF dom sigTop sigNext → ASTZipperL dom (sigNext ::: sigs) sig → ASTZipperL dom (sigTop ::: sigNext ::: sigs) sig
 
 data ASTLocationL dom (sigHoles ∷ HList) sig where
   LLoc ∷ AST dom sigHole → ASTZipperL dom (sigHole ::: sigs) sig → ASTLocationL dom (sigHole ::: sigs) sig
