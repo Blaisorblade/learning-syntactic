@@ -12,12 +12,6 @@ data HList where
   (:::) ∷ a → HList → HList
 infixr 5 :::
 
-{-
-data HList2 (ts ∷ [*]) where
-  HNil2 ∷ HList2 '[]
-  (::::) ∷ a → HList2 ts → HList2 (a ': ts)
-infixr 5 ::::
--}
 -- | A location in an AST, where the hole's signature is the head of sigHoles,
 -- and the whole tree has signature sig. All ASTs involved share the same
 -- domain.
