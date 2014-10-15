@@ -1,3 +1,4 @@
+{-# LANGUAGE PolyKinds #-} -- This makes less code compile
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE DataKinds #-}
@@ -95,7 +96,7 @@ goLeft (Loc arg (ZRight f parent)) = Loc f (ZLeft parent arg)
 goRight ∷ ASTLocation dom (a :→ sig ::: sig ::: sigs) sigTot → ASTLocation dom (Full a ::: sig ::: sigs) sigTot
 goRight (Loc f (ZLeft parent arg)) = Loc arg (ZRight f parent)
 
-goUp ∷ ASTLocation dom (sig1 ::: sig ::: sigs) sigTot → ASTLocation dom (sig ::: sigs) sigTot
+goUp ∷ ∀ dom sigs sigTot (sig1 :: *) (sig ∷ *). ASTLocation dom (sig1 ::: sig ::: sigs) sigTot → ASTLocation dom (sig ::: sigs) sigTot
 goUp (Loc f   (ZLeft parent arg)) = Loc (f :$ arg) parent
 goUp (Loc arg (ZRight f parent))  = Loc (f :$ arg) parent
 
@@ -125,7 +126,7 @@ goLeftL (LLoc arg (LCons (FZRight f) parent)) = LLoc f (LCons (FZLeft arg) paren
 goRightL ∷ ASTLocationL dom (a :→ sig ::: sig ::: sigs) sigTot → ASTLocationL dom (Full a ::: sig ::: sigs) sigTot
 goRightL (LLoc f (LCons (FZLeft arg) parent)) = LLoc arg (LCons (FZRight f) parent)
 
-goUpL ∷ ASTLocationL dom (sig1 ::: sig ::: sigs) sigTot → ASTLocationL dom (sig ::: sigs) sigTot
+goUpL ∷ ∀ dom sigs sigTot (sig1 :: *) (sig ∷ *). ASTLocationL dom (sig1 ::: sig ::: sigs) sigTot → ASTLocationL dom (sig ::: sigs) sigTot
 goUpL (LLoc f   (LCons (FZLeft  arg) parent)) = LLoc (f :$ arg) parent
 goUpL (LLoc arg (LCons (FZRight f)   parent)) = LLoc (f :$ arg) parent
 
