@@ -64,12 +64,6 @@ data ASTZipperL dom (sigHoles ∷ HList) sig where
   LNil ∷ ASTZipperL dom (sig ::: HNil) sig
   LCons ∷ ASTZipperF dom sigTop sigNext → ASTZipperL dom (sigNext ::: sigs) sig → ASTZipperL dom (sigTop ::: sigNext ::: sigs) sig
 
--- Distinguish ASTZipper that only focus fully applied elements.
-
-data ASTZipperLF dom (sigHoless :: [HList]) sig where
-  LNilF :: ASTZipperLF dom ((Full sig ::: HNil) ': '[]) (Full sig)
-  LConsF :: ASTZipperL dom sigHoles (Full sigNext) → ASTZipperLF dom (((Full sigNext) ::: sigHoles2) ': sigHoless) (Full sigNext2) → ASTZipperLF dom (sigHoles ': (Full sigNext ::: sigHoles2) ': sigHoless) (Full sigNext2)
-
 data ASTLocationL dom (sigHoles ∷ HList) sig where
   LLoc ∷ AST dom sigHole → ASTZipperL dom (sigHole ::: sigs) sig → ASTLocationL dom (sigHole ::: sigs) sig
 
@@ -143,6 +137,13 @@ mergeL ∷ AST dom sigHole → ASTZipperL dom (sigHole ::: sigs) sig → AST dom
 mergeL ast LNil = ast
 mergeL ast (LCons (FZLeft right) parent) = mergeL (ast :$ right) parent
 mergeL ast (LCons (FZRight left) parent) = mergeL (left :$ ast)  parent
+
+
+-- Distinguish ASTZipper that only focus fully applied elements.
+
+data ASTZipperLF dom (sigHoless :: [HList]) sig where
+  LNilF :: ASTZipperLF dom ((Full sig ::: HNil) ': '[]) (Full sig)
+  LConsF :: ASTZipperL dom sigHoles (Full sigNext) → ASTZipperLF dom (((Full sigNext) ::: sigHoles2) ': sigHoless) (Full sigNext2) → ASTZipperLF dom (sigHoles ': (Full sigNext ::: sigHoles2) ': sigHoless) (Full sigNext2)
 
 
 ex1M ∷ Expr Int
