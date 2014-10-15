@@ -1,4 +1,3 @@
-{-# LANGUAGE PolyKinds #-} -- This makes less code compile
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE DataKinds #-}
